@@ -2,15 +2,19 @@
     "version": 2,
     "builds": [
       {
-        "src": "src/app/api/products/route.js",
-        "use": "@vercel/node"
+        "src": "package.json",
+        "use": "@vercel/next"
       }
     ],
     "routes": [
       {
-        "src": "/api/products(.*)",
-        "dest": "src/app/api/products/route.js"
+        "src": "/api/(.*)",
+        "dest": "/pages/api/$1"
       }
-    ]
+    ],
+    "env": {
+      "MONGO_URI": "mongodb+srv://wajihafatima:E-com123@webcluster.wxiat.mongodb.net/?retryWrites=true&w=majority&appName=WebCluster",
+      "NODE_ENV": "production"
+    }
   }
   
