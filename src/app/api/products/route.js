@@ -1,88 +1,90 @@
-import connectDb from "@/lib/db";
-import productModel from "@/model/productModel";
+import Product from "@/model/productModel";
+import connectDb from "@/utils/db";
 import { NextResponse } from "next/server";
 
-// GET all products
-export async function GET(req) {
+export async function GET() {
   try {
     await connectDb();
-    const products = await productModel.find({});
-    return NextResponse.json({ products }, { status: 200 });
+    const products = await Product.find({});
+    return NextResponse.json({ isSuccessful: true, data: products }, { status: 200 });
   } catch (error) {
     console.error("Error fetching products:", error);
     return NextResponse.json(
-      { products: null, message: "Error fetching products" },
+      { isSuccessful: false, message: "Error fetching products" },
       { status: 500 }
     );
   }
 }
 
-// POST a new product
+// Handle POST request
 export async function POST(req) {
   try {
     await connectDb();
-    const body = await req.json();
-    const newProduct = await productModel.create(body);
-    return NextResponse.json({ products: newProduct }, { status: 201 });
-  } catch (error) {
-    console.error("Error creating product:", error);
-    return NextResponse.json(
-      { products: null, message: "Error creating product" },
-      { status: 500 }
-    );
-  }
-}
+    const { title, description, price } = await req.json();
 
-
-
-export async function PUT(req, { params }) {
-  try {
-    const { id } = params; // Get the ID from URL params
-    const updateData = await req.json(); // Get the data to update the product with
-
-    await connectDb();
-
-    const updatedProduct = await productModel.findByIdAndUpdate(id, updateData, { new: true });
-
-    if (!updatedProduct) {
+    if (!title || !description || !price) {
       return NextResponse.json(
-        { products: null, message: "Product not found" },
-        { status: 404 }
+        { isSuccessful: false, message: "All fields are required" },
+        { status: 400 }
       );
     }
 
+    const existingProduct = await Product.findOne({ title });
+    if (existingProduct) {
+      return NextResponse.json(
+        { isSuccessful: false, message: "Product already exists" },
+        { status: 400 }
+      );
+    }
+
+    const newProduct = new Product({ title, description, price });
+    await newProduct.save();
+
     return NextResponse.json(
-      { products: updatedProduct, message: "Product updated successfully" },
-      { status: 200 }
+      { isSuccessful: true, data: newProduct.toObject() },
+      { status: 201 }
     );
   } catch (error) {
-    console.error("Error updating product:", error);
+    console.error("Error saving product:", error);
     return NextResponse.json(
-      { products: null, message: "Error updating product" },
+      { isSuccessful: false, message: "Internal Server Error" },
       { status: 500 }
     );
   }
 }
-// DELETE a product by ID
-export async function DELETE(req, { params }) {
+
+
+// Handle DELETE request
+export async function DELETE(req) {
   try {
-    const { id } = params;
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json(
+        { isSuccessful: false, message: "Product ID is required" },
+        { status: 400 }
+      );
+    }
 
     await connectDb();
-    const deletedProduct = await productModel.findByIdAndDelete(id);
+    const deletedProduct = await Product.findByIdAndDelete(id);
 
     if (!deletedProduct) {
       return NextResponse.json(
-        { products: null, message: "Product not found" },
+        { isSuccessful: false, message: "Product not found" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ products: deletedProduct }, { status: 200 });
+    return NextResponse.json(
+      { isSuccessful: true, data: deletedProduct.toObject() },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error deleting product:", error);
     return NextResponse.json(
-      { products: null, message: "Error deleting product" },
+      { isSuccessful: false, message: "Internal Server Error" },
       { status: 500 }
     );
   }
